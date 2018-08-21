@@ -1,0 +1,8 @@
+{
+  "Url": "https://southcentralus.api.cognitive.microsoft.com/customvision/v2.0/Prediction/37d06f54-eea9-4c09-ba39-5ddd84d9e195/image",
+  "Header": {
+              "prediction-key": "2c61f237e1364634997106e622629b00",
+              "content-type": "application/octet-stream"
+  }
+
+}
