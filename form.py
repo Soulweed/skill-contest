@@ -7,10 +7,19 @@ from PyQt4.QtCore import *
 import cv2
 import numpy as np
 import requests, json
-# import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import time
 
-qtCreatorFile = "/home/pea/TestGUI/main.ui"  # Enter file here.
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
+GPIO.setup(26, GPIO.IN) # Button Capture
+GPIO.setup(6, GPIO.OUT) # LED RED
+GPIO.setup(5, GPIO.OUT) # LED YELLOW
+GPIO.setup(21, GPIO.OUT) # LED GREEN
+GPIO.setup(13, GPIO.OUT) # Buzzer
+
+qtCreatorFile = "/home/pi/peas1/skill-contest/main.ui"  # Enter file here.
 #qtCreatorFile = "/home/pi/smarteye-gui/main.ui"  # Enter file here.
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
@@ -23,34 +32,77 @@ except AttributeError:
         return s
 
 
-class MyApp(QtGui.QMainWindow, Ui_MainWindow):
-
-    class Sensor:
+class Sensor:
         def __init__(self):
             # self.gpio = GPIO
             self.delay = 2
 
         def pressed(self):
-            print("Action from Sensor Class")
-            """
-            Check If StateMent here
-
-            """
-            return False
-
-        def led(self):
+            status = GPIO.input(26)
+            if status:
+                return True
+            else:
+                return False
+            
+        def led(self, status):
             print("Action LED")
+            if status:
+                GPIO.output(21,True)
+                GPIO.output(6,False)
+            else:
+                GPIO.output(6,True)
+                GPIO.output(21,False)
 
-        def buzzer(self):
+        def buzzer(self, mode):
             print("Action Buzzer")
+            period = 1.0/650.0
+            delay = period/4
+            cycle = int(0.1*650.0)
+            if mode :
+                for i in range(cycle):
+                    GPIO.output(13, True) 	
+                    time.sleep(delay) 		
+                    GPIO.output(13, False) 
+                    time.sleep(delay)
+                    GPIO.output(13, True) 	
+                    time.sleep(delay) 		
+                    GPIO.output(13, False) 	
+                    time.sleep(delay)
+                time.sleep(0.5)
+                for i in range(cycle):
+                    GPIO.output(13, True) 	
+                    time.sleep(delay) 		
+                    GPIO.output(13, False) 	
+                    time.sleep(delay)
+                    GPIO.output(13, True) 	
+                    time.sleep(delay) 	
+                    GPIO.output(13, False) 
+                    time.sleep(delay)
+            else:
+                period = 1.0/650.0
+                delay = period/4
+                cycle = int(0.4*650.0)
+                for i in range(cycle):
+                    GPIO.output(13, True) 	
+                    time.sleep(delay) 		
+                    GPIO.output(13, False) 	
+                    time.sleep(delay)
+                    GPIO.output(13, True) 
+                    time.sleep(delay) 	
+                    GPIO.output(13, False) 	
+                    time.sleep(delay)
+                
+            
 
-    class Capture:
-        def __init__(self):
+class Capture:
+        def __init__(self, parent):
             self.capturing = False
             self.c = cv2.VideoCapture(0)
             self.frame = None
             self.live_flag = None
-            self.sensor = MyApp.Sensor()
+            
+            self.sensor = Sensor()
+            self.parent = parent
 
         def startCapture(self):
             print "pressed start"
@@ -69,10 +121,9 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
                 # cv2.rectangle(frame, (215, 200), (480, 400), (255, 0, 0), 2)
                 self.frame = frame
                 flag = self.sensor.pressed()
-                if flag:
+                if not flag:
                     print("back from sensor")
-                    MyApp.snap_handler()
-                    MyApp.rest_call()
+                    self.parent.snap_handler()
 
                     # self.endCapture()
                 # cv2.imwrite('/tmp/live.png', cv2.resize(frame, (431, 281)), [cv2.IMWRITE_PNG_COMPRESSION, 9])
@@ -92,14 +143,17 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
             cap.release()
             QtCore.QCoreApplication.quit()
 
+
+class MyApp(QtGui.QMainWindow, Ui_MainWindow):
+
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
 
-
+        self.sensor = Sensor()
         self.setupUi(self)
         self.config = None
-        self.capture = MyApp.Capture()
+        self.capture = Capture(self)
         self.fileDiag = QFileDialog()
         self.img_path = None
         self.live_flag = None
@@ -144,15 +198,17 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
                 # print res.status_code
                 self.label.setText("STATUS : CONNECTED")
                 self.label.setStyleSheet('color: green')
+                self.sensor.led(status=True)
             else:
                 # print res.status_code
                 self.label.setText("STATUS : DISCONNECTED")
                 self.label.setStyleSheet('color: red')
-
+                self.sensor.led(status=True)
 
         except Exception as Err:
             self.label.setText("STATUS : DISCONNECTED")
             self.label.setStyleSheet('color: red')
+            self.sensor.led(status=False)
             pass
 
     def rest_call(self, img):
@@ -166,12 +222,16 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         print(response.status_code)
         print('Debug')
         # TODO : Utilize Response Here.
+        if response.status_code == 200:
+            self.sensor.buzzer(mode=True)
+        else:
+            self.sensor.buzzer(mode=False)
         result = json.loads(response.content)
         predictions = result.get('predictions')  # prediction is a List of Dict.
         # Try to drop less prob.
         output = []
         for pred in predictions:
-            if int(pred.get('probability')*100) >= 85:
+            if int(pred.get('probability')*100) >= 80:
                 output.append(pred)
         # Try to count object that found in images
         tmp = []
