@@ -7,6 +7,15 @@ from PyQt4.QtCore import *
 import cv2
 import numpy as np
 import requests, json
+import base64
+import json
+import operator
+import microgear.client as client
+import time
+import random
+import string
+import math
+
 import RPi.GPIO as GPIO
 import time
 
@@ -19,8 +28,8 @@ GPIO.setup(5, GPIO.OUT) # LED YELLOW
 GPIO.setup(21, GPIO.OUT) # LED GREEN
 GPIO.setup(13, GPIO.OUT) # Buzzer
 
-qtCreatorFile = "/home/pi/peas1/skill-contest/main.ui"  # Enter file here.
-#qtCreatorFile = "/home/pi/smarteye-gui/main.ui"  # Enter file here.
+qtCreatorFile = "/home/pi/peas1/skill-contest/main_final.ui"  # Enter file here.
+#qtCreatorFile = "/home/pea/Desktop/skill-contest/main_final.ui"  # Enter file here.
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
@@ -39,13 +48,14 @@ class Sensor:
 
         def pressed(self):
             status = GPIO.input(26)
+            status = True
             if status:
                 return True
             else:
                 return False
             
         def led(self, status):
-            print("Action LED")
+            # print("Action LED")
             if status:
                 GPIO.output(21,True)
                 GPIO.output(6,False)
@@ -60,39 +70,38 @@ class Sensor:
             cycle = int(0.1*650.0)
             if mode :
                 for i in range(cycle):
-                    GPIO.output(13, True) 	
-                    time.sleep(delay) 		
-                    GPIO.output(13, False) 
+                    GPIO.output(13, True)
                     time.sleep(delay)
-                    GPIO.output(13, True) 	
-                    time.sleep(delay) 		
-                    GPIO.output(13, False) 	
+                    GPIO.output(13, False)
+                    time.sleep(delay)
+                    GPIO.output(13, True)
+                    time.sleep(delay)
+                    GPIO.output(13, False)
                     time.sleep(delay)
                 time.sleep(0.5)
                 for i in range(cycle):
-                    GPIO.output(13, True) 	
-                    time.sleep(delay) 		
-                    GPIO.output(13, False) 	
+                    GPIO.output(13, True)
                     time.sleep(delay)
-                    GPIO.output(13, True) 	
-                    time.sleep(delay) 	
-                    GPIO.output(13, False) 
+                    GPIO.output(13, False)
+                    time.sleep(delay)
+                    GPIO.output(13, True)
+                    time.sleep(delay)
+                    GPIO.output(13, False)
                     time.sleep(delay)
             else:
                 period = 1.0/650.0
                 delay = period/4
                 cycle = int(0.4*650.0)
                 for i in range(cycle):
-                    GPIO.output(13, True) 	
-                    time.sleep(delay) 		
-                    GPIO.output(13, False) 	
+                    GPIO.output(13, True)
                     time.sleep(delay)
-                    GPIO.output(13, True) 
-                    time.sleep(delay) 	
-                    GPIO.output(13, False) 	
+                    GPIO.output(13, False)
                     time.sleep(delay)
-                
-            
+                    GPIO.output(13, True)
+                    time.sleep(delay)
+                    GPIO.output(13, False)
+                    time.sleep(delay)
+
 
 class Capture:
         def __init__(self, parent):
@@ -149,7 +158,7 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
-
+        self.peano_flag =None
         self.sensor = Sensor()
         self.setupUi(self)
         self.config = None
@@ -179,6 +188,8 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         self.circle_radio.toggled.connect(lambda: self.btnstate(self.circle_radio))
         self.unknow_radio.toggled.connect(lambda: self.btnstate(self.unknow_radio))
         self.livepreview.toggled.connect(lambda: self.btnstate(self.livepreview))
+        self.peano_chk.toggled.connect(lambda: self.btnstate(self.peano_chk))
+
 
         self.object_type = None
 
@@ -190,6 +201,27 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         self.Timer.timeout.connect(self.check_status)
         self.Timer.start(5000)
 
+        self.gearkey = 'liLGrIH0WZdAKT0'  # key
+        self.gearsecret = 'OfFLXs2NlqL3ecjkaClXhEUli'  # secret
+        self.appid = 'ImageRaspi'
+
+        client.create(self.gearkey, self.gearsecret, self.appid, {'debugmode': True})
+        client.on_connect = self.callback_connect
+        client.setalias("doraemon")
+        client.on_message = self.callback_message
+        client.on_error = self.callback_error
+        client.subscribe("/mails")
+        client.connect()
+
+    def callback_error(self):
+        print("Error Netpie")
+
+    def callback_connect(self):
+        print("Now I am connected with netpie")
+
+    def callback_message(topic, message):
+        print("Incoming")
+        pass
 
     def check_status(self):
         try:
@@ -248,12 +280,71 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
             detect.update({f: box})
             del box
 
+        if self.peano_flag :
+            print("Detect PEANO")
+
+            # TODO : Do stuff OCR HERE
+            try:
+                res = requests.post(
+                    url="https://southeastasia.api.cognitive.microsoft.com/vision/v2.0/ocr",
+                    params={
+                        "language": "unk",
+                        "detectOrientation ": "true",
+                    },
+                    headers={
+                        "Content-Type": "application/octet-stream",
+                        "Ocp-Apim-Subscription-Key": "03c4947c97f0483dbd4e53e8984fad10",
+                    },
+                    data=body
+                )
+                print('Response HTTP Status Code: {status_code}'.format(
+                    status_code=response.status_code))
+                print('Response HTTP Response Body: {content}'.format(
+                    content=response.content))
+                peano= json.loads(res.content)
+                self.peano = peano.get('regions')[0].get('lines')[0].get('words')[0].get('text')
+
+            except requests.exceptions.RequestException:
+                print('HTTP Request failed')
+
+        else:
+            self.peano = None
+
         self.plotBox(detect)
-        self.update_table(detect)
+        self.update_table(info=detect, peano=self.peano)
 
-    def update_table(self, info): # TODO : Argent Require
+    def rest_call_2(self, img):
+        print("Prediction")
 
-        horHeaders = ['Device-Type', 'UNIT']
+        url = self.config.get("Url")
+        body = img
+        headers = self.config.get("Header")
+
+        response = requests.request("POST", url, data=body, headers=headers)
+        print(response.status_code)
+        print('Debug')
+        # TODO : Utilize Response Here.
+        if response.status_code == 200:
+            self.sensor.buzzer(mode=True)
+        else:
+            self.sensor.buzzer(mode=False)
+        result = json.loads(response.content)
+        print("Debug")
+        score_0 = result.get("predictions")[0]
+        score_1 = result.get("predictions")[1]
+        if score_0.get('probability') >= score_1.get('probability'):
+            # label_result = score_0.get("tagName")
+            # confident = score_0.get("probability")
+            info = {score_0.get("tagName"): score_0.get("probability")}
+        else:
+            # label_result = score_1.get("tagName")
+            # confident = score_1.get("probability")
+            info = {score_1.get("tagName"): score_1.get("probability")}
+        self.update_table_2(info=info)
+
+    def update_table_2(self, info): # TODO : Argent Require
+
+        horHeaders = ['Prediction', 'Confident (%)']
 
         ind = 0
         # self.tableWidget.resizeColumnsToContents()
@@ -266,9 +357,45 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
 
         for k, v in info.items():
             KeyItem = QTableWidgetItem(k)
-            ValItem = QTableWidgetItem(str(len(v)))
+            ValItem = QTableWidgetItem(str(v*100))
             self.tableWidget.setItem(ind, 0, KeyItem)
             self.tableWidget.setItem(ind, 1, ValItem)
+            ind += 1
+        self.tableWidget.setHorizontalHeaderLabels(horHeaders)
+        # TODO : Stuff for netpie
+
+        client.publish('/risk', str(v*100))
+        client.publish('/risk_lb', str(k))
+        filestuff = self.img_tmp
+        img = str(filestuff[0])
+        with open(img,'rb') as img_file :
+            encoded_string = base64.b64encode(img_file.read())
+        img_file.close()
+        str_img = str('<center><img src="data:image/png;base64,' + encoded_string.decode(
+            'utf-8') + '" width="300" height="300"/><center>')
+        client.publish('/snap', str_img)
+
+
+    def update_table(self, info, peano= '99-999999'): # TODO : Argent Require
+
+        horHeaders = ['Device-Type', 'UNIT', 'PEANO']
+
+        ind = 0
+        # self.tableWidget.resizeColumnsToContents()
+        # self.tableWidget.resizeRowsToContents()
+        self.tableWidget.setColumnCount(3)
+        self.tableWidget.setRowCount(len(info.keys()))
+        self.tableWidget.setColumnWidth(0, 320)
+        self.tableWidget.setColumnWidth(1, 142)
+        self.tableWidget.setColumnWidth(2, 160)
+
+        for k, v in info.items():
+            KeyItem = QTableWidgetItem(k)
+            ValItem = QTableWidgetItem(str(len(v)))
+            PEAItem = QTableWidgetItem(str(peano))
+            self.tableWidget.setItem(ind, 0, KeyItem)
+            self.tableWidget.setItem(ind, 1, ValItem)
+            self.tableWidget.setItem(ind, 2, PEAItem)
             ind += 1
         self.tableWidget.setHorizontalHeaderLabels(horHeaders)
 
@@ -301,12 +428,13 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         if self.object_type == "Transformer":
             self.config = None
             self.config = json.load(open("./config_1.json", 'r'))
-            self.rest_call(open(str(self.img_path), 'rb').read())  # Call Function rest_call by passing BinaryByte of Image
+            self.rest_call(open(str(self.img_path), 'rb').read())  # Call Function rest_call by passing BinaryByte
+            # of Image
 
         elif self.object_type == "Patrol":
             self.config = None
             self.config = json.load(open("./config_2.json", 'r'))
-            self.rest_call(open(str(self.img_path), 'rb').read())
+            self.rest_call_2(open(str(self.img_path), 'rb').read())
 
     def btnstate(self, b):  # For handle State of Radio Button Selected
         # TODO : remove print()
@@ -315,7 +443,7 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
                 print b.text() + " is selected"
                 self.object_type = "Transformer"
                 self.detect_btn.setEnabled(True)
-        if b.text() == "Partol":
+        if b.text() == "Patrol":
             if b.isChecked():
                 print b.text() + " is selected"
                 self.object_type = "Patrol"
@@ -327,6 +455,13 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
             else:
                 print "Not Check"
                 self.capture.live_flag = False
+        if b.text() == "PEANO":
+            if b.isChecked():
+                print b.text() + " is Checked"
+                self.peano_flag = True
+            else:
+                print "Not Check"
+                self.peano_flag = False
 
     def get_file(self):  # Function Handle on OpenDialog Button.
 
@@ -335,6 +470,7 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         filenames = QStringList()
         if self.fileDiag.exec_():  # Check File Dialog Choosing
             filenames = self.fileDiag.selectedFiles()
+            self.img_tmp = filenames
             tmp = cv2.imread(str(filenames[0]))
             tmp = cv2.resize(tmp, (320, 240))
             cv2.imwrite(str(filenames[0]), tmp)  # Open Resize and Replace file
@@ -355,6 +491,7 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         image = QtGui.QImage(QtGui.QImageReader("./output/snap.png").read())
         self.origin_lb.setPixmap(QtGui.QPixmap(image))
         self.origin_lb.show()
+
 
 
 # Static Method for Handle Exit Task.
