@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>670</width>
-    <height>617</height>
+    <width>683</width>
+    <height>760</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1496,13 +1496,32 @@
      <string>Detect</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="update_btn">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>350</y>
+      <width>111</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Update</string>
+    </property>
+   </widget>
    <widget class="QTableWidget" name="tableWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>480</y>
+      <y>510</y>
       <width>651</width>
-      <height>71</height>
+      <height>191</height>
      </rect>
     </property>
    </widget>
@@ -1510,7 +1529,7 @@
     <property name="geometry">
      <rect>
       <x>480</x>
-      <y>570</y>
+      <y>720</y>
       <width>181</width>
       <height>21</height>
      </rect>
@@ -1590,7 +1609,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>670</width>
+     <width>683</width>
      <height>25</height>
     </rect>
    </property>

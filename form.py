@@ -28,7 +28,7 @@ GPIO.setup(5, GPIO.OUT) # LED YELLOW
 GPIO.setup(21, GPIO.OUT) # LED GREEN
 GPIO.setup(13, GPIO.OUT) # Buzzer
 
-qtCreatorFile = "/home/pi/peas1/skill-contest/main_final.ui"  # Enter file here.
+qtCreatorFile = "/home/pi/peas1/skill-contest/main_final_new.ui"  # Enter file here.
 #qtCreatorFile = "/home/pea/Desktop/skill-contest/main_final.ui"  # Enter file here.
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
@@ -48,7 +48,7 @@ class Sensor:
 
         def pressed(self):
             status = GPIO.input(26)
-            status = True
+            
             if status:
                 return True
             else:
@@ -122,20 +122,22 @@ class Capture:
             cap = self.c
             while self.capturing:
                 ret, frame = cap.read()
-                if self.live_flag:
+                frame = cv2.resize(frame, (431, 281))
+		if self.live_flag:
                     cv2.imshow("Capture", frame)
                 else:
-                    cv2.destroyAllWindows()
-                cv2.waitKey(5)
+                    cv2.destroyWindow("Capture")
+		    pass
                 # cv2.rectangle(frame, (215, 200), (480, 400), (255, 0, 0), 2)
                 self.frame = frame
-                flag = self.sensor.pressed()
+		cv2.waitKey(1)
+                flag = self.sensor.pressed() # TODO : comment if you don't have sensor
                 if not flag:
-                    print("back from sensor")
+                    print("Capture from sensor")
                     self.parent.snap_handler()
 
-                    # self.endCapture()
-                # cv2.imwrite('/tmp/live.png', cv2.resize(frame, (431, 281)), [cv2.IMWRITE_PNG_COMPRESSION, 9])
+                    self.endCapture()
+                #cv2.imwrite('~/peas1/skill-contest/live.png', cv2.resize(self.frame, (431, 281)), [cv2.IMWRITE_PNG_COMPRESSION, 9])
             cv2.destroyAllWindows()
 
         def endCapture(self):
@@ -147,6 +149,7 @@ class Capture:
 
         def quitCapture(self):
             print "pressed Quit"
+            self.capturing = False
             cap = self.c
             cv2.destroyAllWindows()
             cap.release()
@@ -199,20 +202,22 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
 
         self.Timer = QTimer()
         self.Timer.timeout.connect(self.check_status)
-        self.Timer.start(5000)
+        self.Timer.start(15000)
 
         self.gearkey = 'liLGrIH0WZdAKT0'  # key
         self.gearsecret = 'OfFLXs2NlqL3ecjkaClXhEUli'  # secret
         self.appid = 'ImageRaspi'
-
-        client.create(self.gearkey, self.gearsecret, self.appid, {'debugmode': True})
-        client.on_connect = self.callback_connect
-        client.setalias("doraemon")
-        client.on_message = self.callback_message
-        client.on_error = self.callback_error
-        client.subscribe("/mails")
-        client.connect()
-
+        try: # TODO : comment if don't need netpie.
+            client.create(self.gearkey, self.gearsecret, self.appid, {'debugmode': True})
+            client.on_connect = self.callback_connect
+            client.setalias("doraemon")
+            client.on_message = self.callback_message
+            client.on_error = self.callback_error
+            client.subscribe("/mails")
+            client.connect()
+        except Exception as e:
+            pass
+        
     def callback_error(self):
         print("Error Netpie")
 
@@ -263,7 +268,7 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         # Try to drop less prob.
         output = []
         for pred in predictions:
-            if int(pred.get('probability')*100) >= 80:
+            if int(pred.get('probability')*100) >= 85:
                 output.append(pred)
         # Try to count object that found in images
         tmp = []
