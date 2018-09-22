@@ -1496,25 +1496,6 @@
      <string>Detect</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="update_btn">
-    <property name="geometry">
-     <rect>
-      <x>550</x>
-      <y>350</y>
-      <width>111</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="text">
-     <string>Update</string>
-    </property>
-   </widget>
    <widget class="QTableWidget" name="tableWidget">
     <property name="geometry">
      <rect>
@@ -1618,4 +1599,4 @@
  </widget>
  <resources/>
  <connections/>
-</ui
+</ui>

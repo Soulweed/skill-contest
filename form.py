@@ -131,12 +131,12 @@ class Capture:
                 # cv2.rectangle(frame, (215, 200), (480, 400), (255, 0, 0), 2)
                 self.frame = frame
 		cv2.waitKey(1)
-                #flag = self.sensor.pressed() # TODO : Uncomment
-                #if not flag:
-                #    print("Capture from sensor")
-                #    self.parent.snap_handler()
+                flag = self.sensor.pressed() # TODO : comment if you don't have sensor
+                if not flag:
+                    print("Capture from sensor")
+                    self.parent.snap_handler()
 
-                    # self.endCapture()
+                    self.endCapture()
                 #cv2.imwrite('~/peas1/skill-contest/live.png', cv2.resize(self.frame, (431, 281)), [cv2.IMWRITE_PNG_COMPRESSION, 9])
             cv2.destroyAllWindows()
 
@@ -201,22 +201,22 @@ class MyApp(QtGui.QMainWindow, Ui_MainWindow):
         self.label.setStyleSheet('color: blue')
 
         self.Timer = QTimer()
-        #self.Timer.timeout.connect(self.check_status)
-        #self.Timer.start(5000)
+        self.Timer.timeout.connect(self.check_status)
+        self.Timer.start(15000)
 
         self.gearkey = 'liLGrIH0WZdAKT0'  # key
         self.gearsecret = 'OfFLXs2NlqL3ecjkaClXhEUli'  # secret
         self.appid = 'ImageRaspi'
-        #try: # TODO : Uncomment if need netpie.
-        #    client.create(self.gearkey, self.gearsecret, self.appid, {'debugmode': True})
-        #    client.on_connect = self.callback_connect
-        #    client.setalias("doraemon")
-        #    client.on_message = self.callback_message
-        #    client.on_error = self.callback_error
-        #    client.subscribe("/mails")
-        #    client.connect()
-        #except Exception as e:
-        #    pass
+        try: # TODO : comment if don't need netpie.
+            client.create(self.gearkey, self.gearsecret, self.appid, {'debugmode': True})
+            client.on_connect = self.callback_connect
+            client.setalias("doraemon")
+            client.on_message = self.callback_message
+            client.on_error = self.callback_error
+            client.subscribe("/mails")
+            client.connect()
+        except Exception as e:
+            pass
         
     def callback_error(self):
         print("Error Netpie")
